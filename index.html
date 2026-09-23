@@ -99,19 +99,6 @@
             line-height: 1.5;
         }
 
-        /* Imagen de la pregunta */
-        .question-image {
-            display: block;
-            max-width: 100%;
-            height: auto;
-            margin: 0 auto 20px auto;
-            border-radius: 12px;
-            border: 1px solid var(--border-color);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-            background-color: #fafafa;
-            object-fit: contain;
-        }
-
         .options-grid {
             display: flex;
             flex-direction: column;
@@ -300,8 +287,6 @@
         <div class="question-container">
             <div class="question-number" id="question-number">Pregunta #1</div>
             <div class="question-text" id="question-text">Cargando...</div>
-            <!-- Contenedor de imagen dinámico -->
-            <div id="image-container"></div>
             <div class="options-grid" id="options-grid">
                 <!-- Opciones se cargan aquí -->
             </div>
@@ -318,38 +303,9 @@
 </div>
 
 <script>
-    // --- CONFIGURACIÓN DE IMÁGENES ---
-    // Carpeta donde están las imágenes
-    const CARPETA_IMAGENES = "imagenes";
-    // Extensión de las imágenes (cambia a "jpg", "jpeg", "png", "webp" según tus archivos)
-    const EXTENSION_IMAGEN = "png";
-
-    // IDs de preguntas que llevan imagen
-    const preguntasConImagen = new Set([
-        4, 9, 18, 28, 32, 33, 35, 50,
-        67,
-        93,
-        99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109,
-        110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120,
-        121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131,
-        132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142,
-        143, 144, 145, 146, 147, 148,
-        151,
-        181, 182,
-        187,
-        197,
-        199, 200
-    ]);
-
-    function tieneImagen(id) {
-        return preguntasConImagen.has(id);
-    }
-
-    function getRutaImagen(id) {
-        return `${CARPETA_IMAGENES}/${id}.${EXTENSION_IMAGEN}`;
-    }
-
     // --- BASE DE DATOS DE PREGUNTAS (Ordenadas 1-200) ---
+    // He transcrito todas las preguntas visibles y he creado placeholders para las faltantes.
+    
     const allQuestions = [
         // --- PÁGINA 1 (1-8) ---
         { id: 1, q: "Está permitido en la vía:", opts: ["Recoger o dejar pasajeros o carga en cualquier lugar", "Dejar animales sueltos o situarlos de forma tal que obstaculicen solo un poco el tránsito", "Recoger o dejar pasajeros en lugares autorizados.", "Ejercer el comercio ambulatorio o estacionario"], correct: 2 },
@@ -529,7 +485,6 @@
     const gameScreen = document.getElementById('game-screen');
     const questionNumber = document.getElementById('question-number');
     const questionText = document.getElementById('question-text');
-    const imageContainer = document.getElementById('image-container');
     const optionsGrid = document.getElementById('options-grid');
     const feedbackContainer = document.getElementById('feedback-container');
     const feedbackText = document.getElementById('feedback-text');
@@ -542,6 +497,7 @@
         startScreen.classList.add('hidden');
         gameScreen.classList.remove('hidden');
         
+        // Iniciar con todas las preguntas ordenadas
         questionsQueue = [...allQuestions];
         incorrectQuestions = [];
         score = 0;
@@ -554,10 +510,11 @@
         isAnswered = false;
         feedbackContainer.classList.remove('show');
         optionsGrid.innerHTML = '';
-        imageContainer.innerHTML = ''; // Limpiar imagen anterior
-
+        
         // Si la cola está vacía, pero hay preguntas incorrectas, las agregamos a la cola
         if (questionsQueue.length === 0 && incorrectQuestions.length > 0) {
+            // Mezclar las incorrectas para que no sea predecible, pero manteniendo el orden si se desea
+            // Aquí las mantenemos en orden de fallo para simplicidad
             questionsQueue = [...incorrectQuestions];
             incorrectQuestions = [];
         }
@@ -573,21 +530,6 @@
         questionNumber.textContent = `Pregunta #${question.id}`;
         questionText.textContent = question.q;
 
-        // --- CARGAR IMAGEN SI CORRESPONDE ---
-        if (tieneImagen(question.id)) {
-            const img = document.createElement('img');
-            img.classList.add('question-image');
-            img.src = getRutaImagen(question.id);
-            img.alt = `Imagen de la pregunta ${question.id}`;
-            img.loading = 'lazy';
-            // Manejo de error: si la imagen no existe, se oculta
-            img.onerror = () => {
-                img.style.display = 'none';
-                console.warn(`No se pudo cargar la imagen: ${getRutaImagen(question.id)}`);
-            };
-            imageContainer.appendChild(img);
-        }
-
         question.opts.forEach((opt, index) => {
             const btn = document.createElement('button');
             btn.classList.add('option-btn');
@@ -598,7 +540,7 @@
 
         // Actualizar progreso
         let progress = ((allQuestions.length - questionsQueue.length) / allQuestions.length) * 100;
-        if (progress > 100) progress = 100;
+        if(progress > 100) progress = 100;
         progressFill.style.width = `${progress}%`;
         
         scoreDisplay.textContent = score;
@@ -620,6 +562,7 @@
             feedbackText.className = "feedback-text correct";
             feedbackDetail.textContent = "";
             
+            // Quitamos la pregunta de la cola (éxito)
             questionsQueue.shift(); 
         } else {
             btnElement.classList.add('incorrect');
@@ -629,6 +572,7 @@
             feedbackText.className = "feedback-text incorrect";
             feedbackDetail.textContent = `La respuesta correcta era: ${question.opts[correctIndex]}`;
             
+            // Movemos la pregunta al final de la cola de repaso
             const failedQuestion = questionsQueue.shift();
             incorrectQuestions.push(failedQuestion);
             
@@ -650,7 +594,6 @@
     function showResults() {
         questionNumber.textContent = "Fin del Quiz";
         questionText.textContent = `¡Has completado todas las preguntas! Puntuación final: ${score}`;
-        imageContainer.innerHTML = '';
         optionsGrid.innerHTML = `<button class="btn-start" onclick="location.reload()">Reiniciar Quiz</button>`;
         feedbackContainer.classList.remove('show');
         progressFill.style.width = '100%';
